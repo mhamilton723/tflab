@@ -9,7 +9,4 @@ setup(name='tflab',
       license=None,
       packages=['tflab'],
       zip_safe=False,
-      install_requires=[
-          'tensorflow',
-          'numpy']
-      )
+      install_requires=['tensorflow', 'numpy'])
