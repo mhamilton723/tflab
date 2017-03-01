@@ -11,6 +11,5 @@ setup(name='tflab',
       zip_safe=False,
       install_requires=[
           'tensorflow',
-          'numpy'
-      ]
+          'numpy']
       )
