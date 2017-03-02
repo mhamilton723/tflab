@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='tflab',
-      version='0.1',
+      version='0.1.1',
       description='A laboratory for experimenting with Tensorflow sbstraction',
       url='https://github.com/mhamilton723/tflab',
       author='Mark Hamilton',
