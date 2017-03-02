@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import sys
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-from lib.network import FeedForwardRegression
-from lib.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
+from tflab.network import FeedForwardRegression
+from tflab.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
 
 # Parameters
 steps = 10000

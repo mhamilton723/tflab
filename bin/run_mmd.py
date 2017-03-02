@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import sys
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-from ..lib.network import FeedForwardRegression, MMDNet
-from ..lib.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
+from tflab.lib.network import FeedForwardRegression, MMDNet
+from tflab.lib.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
 
 
 def gen_synthetic_data(n_samples, X_dim, Y_dim):

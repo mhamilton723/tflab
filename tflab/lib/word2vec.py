@@ -39,8 +39,8 @@ import tensorflow as tf
 from six.moves import xrange  # pylint: disable=redefined-builtin
 from tensorflow.models.embedding import gen_word2vec as w2v
 
-from lib.serializable import Serializable
-from lib.utils import save_embs, get_or_create_path, params_to_name, optimize_, log
+from tflab.lib.serializable import Serializable
+from tflab.lib.utils import save_embs, get_or_create_path, params_to_name, optimize_, log
 
 
 class Word2Vec(Serializable):

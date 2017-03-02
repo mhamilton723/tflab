@@ -1,4 +1,4 @@
-from lib.utils import get_or_create_path
+from tflab.lib.utils import get_or_create_path
 from abc import ABCMeta
 import os
 import warnings
