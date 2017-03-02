@@ -10,4 +10,4 @@ setup(name='tflab',
       packages=['tflab'],
       zip_safe=False,
       install_requires=['tensorflow', 'numpy'],
-      scripts=['bin/run_word2vec','bin/run_mmd','bin/run_network'],)
+      scripts=['bin/run_word2vec.py','bin/run_mmd.py','bin/run_network.py'],)
