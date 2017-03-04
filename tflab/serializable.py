@@ -1,8 +1,10 @@
-from tflab.lib.utils import get_or_create_path
-from abc import ABCMeta
 import os
 import warnings
+from abc import ABCMeta
+
 import tensorflow as tf
+
+from tflab.utils import get_or_create_path
 
 
 class Serializable:

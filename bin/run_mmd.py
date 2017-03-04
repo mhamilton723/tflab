@@ -1,15 +1,12 @@
+import matplotlib as mpl
 import numpy as np
 import tensorflow as tf
 
-import matplotlib as mpl
-
 mpl.use('Agg')
-import matplotlib.pyplot as plt
 import sys
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-from tflab.lib.network import FeedForwardRegression, MMDNet
-from tflab.lib.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
+from tflab.network import FeedForwardRegression, MMDNet
 
 
 def gen_synthetic_data(n_samples, X_dim, Y_dim):

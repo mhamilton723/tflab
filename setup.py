@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(name='tflab',
       version='0.1.1',
-      description='A laboratory for experimenting with Tensorflow sbstraction',
+      description='A laboratory for experimenting with Tensorflow abstraction',
       url='https://github.com/mhamilton723/tflab',
       author='Mark Hamilton',
       author_email='mhamilton723@gmail.com',

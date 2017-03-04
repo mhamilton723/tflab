@@ -1,10 +1,12 @@
+import collections
+import inspect
+import os
 import zipfile
-import tensorflow as tf
+
 import h5py
 import numpy as np
-import collections
-import os
-import inspect
+import tensorflow as tf
+
 import optimizers
 
 

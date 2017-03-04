@@ -1,8 +1,8 @@
 import tensorflow as tf
 import sys
 from os import path
-from tflab.lib.utils import call_with_flags, instantiate_with_flags
-from tflab.lib.word2vec import Word2Vec
+from tflab.utils import call_with_flags, instantiate_with_flags
+from tflab.word2vec import Word2Vec
 
 flags = tf.app.flags
 

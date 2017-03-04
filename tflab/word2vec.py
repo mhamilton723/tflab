@@ -32,15 +32,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import time
-
 import numpy as np
 import tensorflow as tf
 from six.moves import xrange  # pylint: disable=redefined-builtin
 from tensorflow.models.embedding import gen_word2vec as w2v
-
-from tflab.lib.serializable import Serializable
 from tflab.lib.utils import save_embs, get_or_create_path, params_to_name, optimize_, log
+
+from tflab.serializable import Serializable
 
 
 class Word2Vec(Serializable):
