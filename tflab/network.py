@@ -70,7 +70,7 @@ class FeedForwardRegression(FeedForward):
         loss_ = self.loss_(X_, Y_)
         train_ = self.train_(loss_, optimizer)
 
-        sess.run(tf.initialize_all_variables())
+        sess.run(tf.global_variables_initializer())
         # Fit all training data
         losses = []
         for step in range(steps):
@@ -121,7 +121,7 @@ class MMDNet(FeedForward):
 
         train_ = self.train_(loss_, optimizer)
 
-        sess.run(tf.initialize_all_variables())
+        sess.run(tf.global_variables_initializer())
         # Fit all training data
         losses = []
         for step in range(pre_train_steps):

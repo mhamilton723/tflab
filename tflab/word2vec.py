@@ -35,10 +35,10 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 from six.moves import xrange  # pylint: disable=redefined-builtin
-from tensorflow.models.embedding import gen_word2vec as w2v
-from tflab.lib.utils import save_embs, get_or_create_path, params_to_name, optimize_, log
 
-from tflab.serializable import Serializable
+from .utils import save_embs, get_or_create_path, params_to_name, optimize_, log
+from .ops import skipgram_word2vec
+from .serializable import Serializable
 
 
 class Word2Vec(Serializable):
@@ -74,9 +74,9 @@ class Word2Vec(Serializable):
             """initialize the variables needed for the embeddings and vocab variables."""
             # The training data. A text file.
             (raw_words_, counts_, words_per_epoch_, epoch_, total_words_, words_,
-             contexts_) = w2v.skipgram(filename=self.train_data,
-                                       min_count=self.min_count,
-                                       batch_size=1)
+             contexts_) = skipgram_word2vec(filename=self.train_data,
+                                            min_count=self.min_count,
+                                            batch_size=1)
             (self.vocab_words, self.vocab_counts, self.words_per_epoch) = \
                 session.run([raw_words_, counts_, words_per_epoch_])
             self.vocab_size = len(self.vocab_words)
@@ -101,7 +101,7 @@ class Word2Vec(Serializable):
             # Softmax bias: [emb_dim].
             self.context_biases_ = tf.Variable(tf.zeros([size]), name="sm_b")
 
-            tf.initialize_all_variables().run()
+            tf.global_variables_initializer().run()
 
     '''
     def _clip_at_max(self, var, max, default=0.0):
@@ -141,11 +141,11 @@ class Word2Vec(Serializable):
 
     def skipgram_(self, batch_size, window_size, subsample):
         (raw_words_, counts_, words_per_epoch_, epoch_, num_words_seen_, words_, contexts_) = \
-            w2v.skipgram(filename=self.train_data,
-                         batch_size=batch_size,
-                         window_size=window_size,
-                         min_count=self.min_count,
-                         subsample=subsample)
+            skipgram_word2vec(filename=self.train_data,
+                              batch_size=batch_size,
+                              window_size=window_size,
+                              min_count=self.min_count,
+                              subsample=subsample)
         return epoch_, num_words_seen_, words_, contexts_
 
     def get_embeddings_(self, word_indicies_):
@@ -154,7 +154,7 @@ class Word2Vec(Serializable):
     def nce_loss_(self, true_word_embs_, true_context_labels_, num_neg_samples):
         expanded_labels_ = tf.expand_dims(true_context_labels_, 1)
         loss_ = tf.reduce_mean(
-            tf.nn.nce_loss(self.context_embs_, self.context_biases_, true_word_embs_, expanded_labels_,
+            tf.nn.nce_loss(self.context_embs_, self.context_biases_, expanded_labels_, true_word_embs_,
                            num_neg_samples, self.vocab_size))
         return loss_
 
@@ -262,7 +262,7 @@ class Word2Vec(Serializable):
         self.param_map['train'] = training_params
         name = params_to_name(self.param_map)
         print("Training: {}".format(name))
-        summary_writer = tf.train.SummaryWriter(
+        summary_writer = tf.summary.FileWriter(
             get_or_create_path(save_path, "summaries", name, exclude_last=False), session.graph)
 
         analogies = self.read_analogies(eval_data)
@@ -282,10 +282,10 @@ class Word2Vec(Serializable):
 
         train_, lr_ = optimize_(loss_, optimizer_name, learning_rate, decay, global_step_)
 
-        loss_summary_ = tf.scalar_summary("NCE loss", loss_)
-        summary_fast_ = tf.merge_summary([loss_summary_])
+        loss_summary_ = tf.summary.scalar("NCE loss", loss_)
+        summary_fast_ = tf.summary.merge([loss_summary_])
 
-        tf.initialize_all_variables().run()
+        tf.global_variables_initializer().run()
         # Properly initialize all variables.
         if run_from_checkpoint:
             self.load_model(save_path, name, session)
@@ -302,10 +302,10 @@ class Word2Vec(Serializable):
                 self.save_model(save_path, name, session)
 
                 analogy_accuracy, correct, total = self.analogy_accuracy(session, analogies)
-                an_acc = tf.scalar_summary("Analogy accuracy", correct * 100.0 / total)
-                an_correct = tf.scalar_summary("Analogy correct", correct)
-                an_total = tf.scalar_summary("Analogy total", total)
-                summary_op_eval = tf.merge_summary([an_acc, an_correct, an_total])
+                an_acc = tf.summary.scalar("Analogy accuracy", correct * 100.0 / total)
+                an_correct = tf.summary.scalar("Analogy correct", correct)
+                an_total = tf.summary.scalar("Analogy total", total)
+                summary_op_eval = tf.summary.merge([an_acc, an_correct, an_total])
                 eval_string, step = session.run([summary_op_eval, global_step_])
                 summary_writer.add_summary(eval_string, step)
 
