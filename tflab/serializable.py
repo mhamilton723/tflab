@@ -4,7 +4,7 @@ from abc import ABCMeta
 
 import tensorflow as tf
 
-from tflab.utils import get_or_create_path
+from .utils import get_or_create_path
 
 
 class Serializable:

@@ -10,6 +10,30 @@ import tensorflow as tf
 import optimizers
 
 
+def dot(x, y):
+    return tf.reduce_sum(x * y, axis=-1)
+
+
+def l2_norm(x):
+    return tf.reduce_sum(tf.square(x), axis=-1)
+
+
+def distance_to_line(a, n, p):
+    """
+    Given a line of form x = a +t*n where t is arbitrary, and given p a point
+    https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+    compute the distance from p to the nearest point of x
+
+
+
+    :return: distance from p to the nearest point of x
+    """
+    res = l2_norm((a - p) - tf.expand_dims(dot((a - p), n),-1) * n)
+    #nodes = [a - p, dot((a - p), n), tf.expand_dims(dot((a - p), n),-1)]
+    #res = tf.Print(res, [tf.shape(n) for n in nodes], "in dist function")
+    return res
+
+
 def get_or_create_path(*paths, **kwargs):
     if "exclude_last" not in kwargs or not kwargs["exclude_last"]:
         dir_paths = [path for path in paths][:-1]
@@ -169,7 +193,7 @@ def log(session, interval, step, summary_op, summary_writer, ops):
         for key, output in zip(keys, other_outputs):
             output_dict[key] = output
 
-        output = " ".join(["{}: {}".format(k,v) for (k,v) in output_dict.iteritems()])
+        output = " ".join(["{}: {}".format(k, v) for (k, v) in output_dict.iteritems()])
         print(output)
 
         summary_writer.add_summary(summary_str, step)
