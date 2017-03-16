@@ -1,19 +1,25 @@
 import tensorflow as tf
-import sys
-from os import path
-from tflab.utils import call_with_flags, instantiate_with_flags
-from tflab.word2vec import Word2Vec
+
+try:
+    from tflab.utils import call_with_flags, instantiate_with_flags
+    from tflab.word2vec import Word2Vec
+    top_dir = "../"
+except ImportError:
+    from tflab.tflab.utils import call_with_flags, instantiate_with_flags
+    from tflab.tflab.word2vec import Word2Vec
+    top_dir = "../../"
+
 
 flags = tf.app.flags
 
-flags.DEFINE_string("save_path", "../out/test_serialize",
+flags.DEFINE_string("save_path", top_dir+"out/test_serialize",
                     "Directory to write the model and training summaries.")
 flags.DEFINE_bool("run_from_checkpoint", True,
                   "whether to try to load the model")
 
-flags.DEFINE_string("train_data", "../data/text8",
+flags.DEFINE_string("train_data", top_dir+"data/text8",
                     "Training text file. E.g., unzipped file http://mattmahoney.net/dc/text8.zip.")
-flags.DEFINE_string("eval_data", "../data/questions-words.txt",
+flags.DEFINE_string("eval_data", top_dir+"data/questions-words.txt",
                     "File consisting of analogies of four tokens."
                     "embedding 2 - embedding 1 + embedding 3 should be close to embedding 4."
                     "See README.md for how to get 'questions-words.txt'.")
