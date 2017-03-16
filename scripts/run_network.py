@@ -7,6 +7,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import sys
 from os import path
+
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from tflab.network import FeedForwardRegression
 from tflab.optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
@@ -30,10 +31,12 @@ opts = [
     ASGradientDescentOptimizer(base_learning_rate=learning_rate),
     tf.train.RMSPropOptimizer(learning_rate=learning_rate),
     ASRMSPropOptimizer(base_learning_rate=learning_rate),
-    tf.train.AdamOptimizer(learning_rate=learning_rate)
+    tf.train.AdamOptimizer(learning_rate=learning_rate),
+    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9),
+    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9, use_nesterov=True),
+    tf.train.AdagradOptimizer(learning_rate=learning_rate)
 ]
-opt_names = ['SGD', 'SGD+AS', 'RMSProp', 'RMSProp+AS', 'ADAM']
-
+opt_names = ['SGD', 'SGD+AS', 'RMSProp', 'RMSProp+AS', 'ADAM', 'SGD+M', 'SGD+NM', 'Adagrad']
 
 # Launch the graph
 losses = []
@@ -47,6 +50,6 @@ with tf.Session() as sess:
 
 plt.clf()
 for loss, opt_name in zip(losses, opt_names):
-    plt.plot(loss[::10], 'o-', alpha=.5, label=opt_name)
+    plt.plot(loss[::100], '+-', alpha=.5, label=opt_name)
 plt.legend()
-plt.savefig("plots/lr_comparison.png")
+plt.savefig("../../plots/lr_comparison.png")

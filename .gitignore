@@ -1,1 +1,8 @@
 *.pyc
+.idea
+data
+dist
+plots
+build
+*.so
+*.egg-info
