@@ -5,9 +5,10 @@ import tensorflow as tf
 mpl.use('Agg')
 import sys
 from os import path
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-from tflab.network import FeedForwardRegression, MMDNet
-
+try:
+    from tflab.network import FeedForwardRegression, MMDNet
+except ImportError:
+    from tflab.tflab.network import FeedForwardRegression, MMDNet
 
 def gen_synthetic_data(n_samples, X_dim, Y_dim):
     X = np.random.normal(0., 1., size=[n_samples, X_dim])
