@@ -36,12 +36,12 @@ import numpy as np
 import tensorflow as tf
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
-from .utils import save_embs, get_or_create_path, params_to_name, optimize_, log
+from .utils import save_embs, get_or_create_path, params_to_name, optimize_
 from .ops import skipgram_word2vec
-from .serializable import Serializable
+from .mixins import Serializable, Logger
 
 
-class Word2Vec(Serializable):
+class Word2Vec(Serializable, Logger):
     """Word2Vec model (Skipgram)."""
 
     def __init__(self,
@@ -68,6 +68,9 @@ class Word2Vec(Serializable):
         self.id2word = None
         self._init_embs(session)
         print("initialized")
+
+    summary_writer = None
+
 
     def _init_embs(self, session):
         with tf.variable_scope(self.name):
@@ -262,7 +265,7 @@ class Word2Vec(Serializable):
         self.param_map['train'] = training_params
         name = params_to_name(self.param_map)
         print("Training: {}".format(name))
-        summary_writer = tf.summary.FileWriter(
+        self.summary_writer = tf.summary.FileWriter(
             get_or_create_path(save_path, "summaries", name, exclude_last=False), session.graph)
 
         analogies = self.read_analogies(eval_data)
@@ -282,8 +285,7 @@ class Word2Vec(Serializable):
 
         train_, lr_ = optimize_(loss_, optimizer_name, learning_rate, decay, global_step_)
 
-        loss_summary_ = tf.summary.scalar("NCE loss", loss_)
-        summary_fast_ = tf.summary.merge([loss_summary_])
+        self.log_scalar("NCE loss", loss_)
 
         tf.global_variables_initializer().run()
         # Properly initialize all variables.
@@ -294,20 +296,18 @@ class Word2Vec(Serializable):
         epoch = 0
         while epoch < epochs_to_train:
             epoch, global_step, _ = session.run([epoch_, global_step_, train_])
-            log(session, summary_interval, global_step, summary_fast_, summary_writer,
-                {'lr': lr_, 'epoch': epoch_, 'step': global_step_})
+
+            self.log_emitter(session, global_step, summary_interval,
+                             additional={'lr': lr_, 'epoch': epoch_, 'step': global_step_})
 
             if global_step % checkpoint_interval == 0:
                 self.save_embeddings(save_path, name)
                 self.save_model(save_path, name, session)
 
                 analogy_accuracy, correct, total = self.analogy_accuracy(session, analogies)
-                an_acc = tf.summary.scalar("Analogy accuracy", correct * 100.0 / total)
-                an_correct = tf.summary.scalar("Analogy correct", correct)
-                an_total = tf.summary.scalar("Analogy total", total)
-                summary_op_eval = tf.summary.merge([an_acc, an_correct, an_total])
-                eval_string, step = session.run([summary_op_eval, global_step_])
-                summary_writer.add_summary(eval_string, step)
+                self.emit_non_tensor("Analogy accuracy", correct * 100.0 / total, global_step)
+                self.emit_non_tensor("Analogy correct", correct, global_step)
+                self.emit_non_tensor("Analogy total", total, global_step)
 
     def get_nearby_word_(self, query_words_):
         # Nodes for computing neighbors for a given word according to their cosine distance.
@@ -401,9 +401,6 @@ class Word2Vec(Serializable):
                     else:
                         # The correct label is not the precision@1
                         break
-        print()
-        print("Eval {}/{} accuracy = {}".format(correct, total, correct * 100.0 / total))
-
         analogy_accuracy = correct * 100.0 / total
         return analogy_accuracy, correct, total
 

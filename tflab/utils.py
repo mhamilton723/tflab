@@ -28,9 +28,9 @@ def distance_to_line(a, n, p):
 
     :return: distance from p to the nearest point of x
     """
-    res = l2_norm((a - p) - tf.expand_dims(dot((a - p), n),-1) * n)
-    #nodes = [a - p, dot((a - p), n), tf.expand_dims(dot((a - p), n),-1)]
-    #res = tf.Print(res, [tf.shape(n) for n in nodes], "in dist function")
+    res = l2_norm((a - p) - tf.expand_dims(dot((a - p), n), -1) * n)
+    # nodes = [a - p, dot((a - p), n), tf.expand_dims(dot((a - p), n),-1)]
+    # res = tf.Print(res, [tf.shape(n) for n in nodes], "in dist function")
     return res
 
 
@@ -145,12 +145,6 @@ def params_to_name(params):
     return "_".join(name_list)
 
 
-def summarize_moments(variable, name):
-    mean, var = tf.nn.moments(variable, axes=[0])
-    mean_sum = tf.scalar_summary("{} mean".format(name), mean[0])
-    var_sum = tf.scalar_summary("{} variance".format(name), var[0])
-    return [mean_sum, var_sum]
-
 
 def call_with_flags(function, FLAGS, **kwargs):
     argnames = {arg for arg in inspect.getargspec(function)[0] if arg not in {"self"}}
@@ -172,31 +166,7 @@ def instantiate_with_flags(clazz, FLAGS, **kwargs):
     return clazz(**params)
 
 
-def parse_summary_ops(summary_str):
-    summary_proto = tf.Summary()
-    summary_proto.ParseFromString(summary_str)
-    summaries = {}
-    for val in summary_proto.value:
-        # Assuming all summaries are scalars.
-        summaries[val.tag] = val.simple_value
-    return summaries
 
-
-def log(session, interval, step, summary_op, summary_writer, ops):
-    if step % interval == 0:
-        keys, values = zip(*ops.iteritems())
-        outputs = session.run([summary_op] + list(ops.values()))
-        summary_str = outputs[0]
-        other_outputs = outputs[1:]
-
-        output_dict = parse_summary_ops(summary_str)
-        for key, output in zip(keys, other_outputs):
-            output_dict[key] = output
-
-        output = " ".join(["{}: {}".format(k, v) for (k, v) in output_dict.iteritems()])
-        print(output)
-
-        summary_writer.add_summary(summary_str, step)
 
 
 def optimize_(loss_, name, starting_lr, decay, global_step_, var_list=None):
