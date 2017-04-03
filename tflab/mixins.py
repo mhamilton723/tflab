@@ -1,6 +1,6 @@
 import os
 import warnings
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 import tensorflow as tf
 
@@ -9,43 +9,101 @@ from tensorflow.core.framework import summary_pb2
 from collections import defaultdict
 
 
-class Serializable:
-    __metaclass__ = ABCMeta
+class Serializable(object):
+    saver = None
 
-    @property
-    def saver(self):
-        return tf.train.Saver()
+    def _create_saver(self):
+        if self.saver is None:
+            self.saver = tf.train.Saver()
 
-    def save_model(self, save_path, name, session):
+    def save(self, save_path, name, session):
+        self._create_saver()
         path = get_or_create_path(save_path, "checkpoints", name)
         self.saver.save(session, path)
         print("Saved to {}".format(path))
 
-    def load_model(self, save_path, name, session, initialize):
-        path = os.path.join(save_path, "checkpoints", name)
-        if os.path.exists(path + ".index"):
-            print("Checkpoint Found: loading model from {}".format(path))
-            self.saver.restore(session, path)
+    def load_or_initialize(self, save_path, name, session, try_load=True):
+        self._create_saver()
+        tf.global_variables_initializer().run()
+        if try_load:
+            path = os.path.join(save_path, "checkpoints", name)
+            if os.path.exists(path + ".index"):
+                print("Checkpoint Found: loading model from {}".format(path))
+                self.saver.restore(session, path)
+            else:
+                warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
+
+
+class Param(object):
+    def abbrev_or_name(self):
+        if self.abbrev is not None:
+            return self.abbrev
         else:
-            warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
+            return self.name
 
-            if initialize:
-                tf.global_variables_initializer().run()
+    def __str__(self):
+        k = self.abbrev_or_name()
+        v = self.value_to_string(self.value)
+        return "{}={}".format(k, v)
+
+    def __init__(self, name, value, abbrev=None, value_to_string=lambda v: str(v)):
+        self.name = name
+        self.value = value
+        self.abbrev = abbrev
+        self.value_to_string = value_to_string
 
 
-class Logger:
-    __metaclass__ = ABCMeta
+class ParamGroup(Param):
+    def __str__(self):
+        k = self.abbrev_or_name()
+        v = '_'.join(str(param) for param in
+                     sorted(self.value, key=lambda p: p.abbrev_or_name()))
+        return k+"={"+str(v)+"}"
 
+    def __init__(self, name, params, abbrev=None):
+        Param.__init__(self, name, params, abbrev)
+
+
+class Parametrizable(object):
+    _param_map = {}
+
+    def add_param(self, name, value, abbrev=None):
+        self._param_map[name] = Param(name, value, abbrev)
+
+    def add_params(self, params):
+        if isinstance(params, dict):
+            params = [Param(name, value) for name, value in params.iteritems()]
+        for p in params:
+            self._param_map[p.name] = p
+
+    def add_param_group(self, name, params, abbrev=None):
+        if isinstance(params, dict):
+            params = [Param(k, v) for k, v in params.iteritems()]
+        self._param_map[name] = ParamGroup(name, params, abbrev)
+
+    def get_param(self, name):
+        return self._param_map[name]
+
+    def get_params(self):
+        return self._param_map.values()
+
+    def del_param(self, name):
+        self._param_map.pop(name)
+
+    def __str__(self):
+        return "_".join(str(p) for p in sorted(self._param_map.values(), key=lambda p: p.abbrev_or_name()))
+
+
+class Logger(object):
     _summaries = defaultdict(list)
 
-    @abstractproperty
     def summary_writer(self):
-        pass
+        raise NotImplementedError
 
     def emit_non_tensor(self, tag, value, step):
         val = summary_pb2.Summary.Value(tag=tag, simple_value=value)
         summary = summary_pb2.Summary(value=[val])
-        self.summary_writer.add_summary(summary, step)
+        self.summary_writer().add_summary(summary, step)
         print("Step: {} {}: {}".format(step, tag, value))
 
     def _summarize_moments(self, name, variable):
@@ -102,4 +160,21 @@ class Logger:
 
             output = " ".join(terms)
             print("Step: {} ".format(step).ljust(15) + output)
-            self.summary_writer.add_summary(summary_str, step)
+            self.summary_writer().add_summary(summary_str, step)
+
+
+class Model(Serializable, Parametrizable, Logger):
+    save_path = None
+
+    def summary_path(self):
+        return os.path.join(self.save_path, "summaries")
+
+    def summary_writer(self):
+        return tf.summary.FileWriter(
+            get_or_create_path(self.summary_path(), str(self), exclude_last=False))
+
+    def save(self, session):
+        Serializable.save(self, self.save_path, str(self), session)
+
+    def load_or_initialize(self, session, try_load=True):
+        Serializable.load_or_initialize(self, self.save_path, str(self), session, try_load)

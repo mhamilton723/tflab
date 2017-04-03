@@ -36,12 +36,12 @@ import numpy as np
 import tensorflow as tf
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
-from .utils import save_embs, get_or_create_path, params_to_name, optimize_
+from .utils import save_embs, get_or_create_path, optimize_
 from .ops import skipgram_word2vec
-from .mixins import Serializable, Logger
+from .mixins import Model
 
 
-class Word2Vec(Serializable, Logger):
+class Word2Vec(Model):
     """Word2Vec model (Skipgram)."""
 
     def __init__(self,
@@ -59,18 +59,15 @@ class Word2Vec(Serializable, Logger):
         self.train_data = train_data
         self.min_count = min_count
         self.name = name
-        self.param_map = {
-            "data": self.train_data.split('/')[-1].split('.')[0],
-            "dim": self.embedding_size,
-            "mc": self.min_count
-        }
+
+        self.add_params({"data": self.train_data.split('/')[-1].split('.')[0],
+                         "dim": self.embedding_size,
+                         "mc": self.min_count})
+
         self.word2id = {}
         self.id2word = None
         self._init_embs(session)
         print("initialized")
-
-    summary_writer = None
-
 
     def _init_embs(self, session):
         with tf.variable_scope(self.name):
@@ -129,14 +126,24 @@ class Word2Vec(Serializable, Logger):
                 maxed_contexts_)
     '''
 
-    def save_embeddings(self, save_path, name):
+    def save_embeddings(self, save_path=None, name=None):
+        if save_path is None:
+            save_path = self.save_path
+        if name is None:
+            name = self.name
+
         filename = get_or_create_path(save_path, "embeddings", name + "_embs.h5")
         save_embs(filename, self.id2word, self.word_embs_.eval(), self.context_embs_.eval(),
                   self.context_biases_.eval())
 
-    def save_vocab(self, save_path):
+    def save_vocab(self, save_path=None, name=None):
+        if save_path is None:
+            save_path = self.save_path
+        if name is None:
+            name = self.name
+
         """Save the vocabulary to a file so the model can be reloaded."""
-        with open(get_or_create_path(save_path, "checkpoints", self.name + "_vocab.txt"), "w") as f:
+        with open(get_or_create_path(save_path, "checkpoints", name + "_vocab.txt"), "w") as f:
             for i in xrange(self.vocab_size):
                 vocab_word = tf.compat.as_text(self.vocab_words[i]).encode("utf-8")
                 f.write("%s %d\n" % (vocab_word,
@@ -253,7 +260,9 @@ class Word2Vec(Serializable, Logger):
               summary_interval=5000,
               checkpoint_interval=50000):
 
-        training_params = {
+        self.save_path = save_path
+
+        self.add_param_group("train", {
             "ws": window_size,
             "on": optimizer_name,
             "lr": learning_rate,
@@ -261,12 +270,9 @@ class Word2Vec(Serializable, Logger):
             "ss": subsample,
             "dist": distortion,
             "loss": loss_name,
-        }
-        self.param_map['train'] = training_params
-        name = params_to_name(self.param_map)
-        print("Training: {}".format(name))
-        self.summary_writer = tf.summary.FileWriter(
-            get_or_create_path(save_path, "summaries", name, exclude_last=False), session.graph)
+        })
+
+        print("Training: {}".format(self))
 
         analogies = self.read_analogies(eval_data)
 
@@ -287,10 +293,7 @@ class Word2Vec(Serializable, Logger):
 
         self.log_scalar("NCE loss", loss_)
 
-        tf.global_variables_initializer().run()
-        # Properly initialize all variables.
-        if run_from_checkpoint:
-            self.load_model(save_path, name, session)
+        self.load_or_initialize(session, try_load=run_from_checkpoint)
 
         """Train the model."""
         epoch = 0
@@ -301,8 +304,8 @@ class Word2Vec(Serializable, Logger):
                              additional={'lr': lr_, 'epoch': epoch_, 'step': global_step_})
 
             if global_step % checkpoint_interval == 0:
-                self.save_embeddings(save_path, name)
-                self.save_model(save_path, name, session)
+                self.save_embeddings(save_path, str(self))
+                self.save(session)
 
                 analogy_accuracy, correct, total = self.analogy_accuracy(session, analogies)
                 self.emit_non_tensor("Analogy accuracy", correct * 100.0 / total, global_step)

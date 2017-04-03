@@ -133,19 +133,6 @@ def avg_correct_probability_mass(p_hat, cross_ref):
     return probs.mean()
 
 
-def params_to_name(params):
-    sorted_items = sorted(params.iteritems())
-    name_list = []
-    for k, v in sorted_items:
-        if isinstance(v, dict):
-            res = k + "_{" + params_to_name(v) + "}"
-            name_list.append(res)
-        else:
-            name_list.append(k + "_" + str(v))
-    return "_".join(name_list)
-
-
-
 def call_with_flags(function, FLAGS, **kwargs):
     argnames = {arg for arg in inspect.getargspec(function)[0] if arg not in {"self"}}
     params = {k: v for (k, v) in FLAGS.__dict__['__flags'].iteritems() if k in argnames}

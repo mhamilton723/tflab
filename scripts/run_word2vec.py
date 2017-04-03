@@ -12,7 +12,7 @@ except ImportError:
 
 flags = tf.app.flags
 
-flags.DEFINE_string("save_path", top_dir+"out/test_serialize",
+flags.DEFINE_string("save_path", top_dir+"out/word2vec",
                     "Directory to write the model and training summaries.")
 flags.DEFINE_bool("run_from_checkpoint", True,
                   "whether to try to load the model")
