@@ -22,16 +22,19 @@ class Serializable(object):
         self.saver.save(session, path)
         print("Saved to {}".format(path))
 
+    def load(self, path, session):
+        if os.path.exists(path + ".index"):
+            print("Checkpoint Found: loading model from {}".format(path))
+            self.saver.restore(session, path)
+        else:
+            warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
+
     def load_or_initialize(self, save_path, name, session, try_load=True):
         self._create_saver()
         tf.global_variables_initializer().run()
         if try_load:
             path = os.path.join(save_path, "checkpoints", name)
-            if os.path.exists(path + ".index"):
-                print("Checkpoint Found: loading model from {}".format(path))
-                self.saver.restore(session, path)
-            else:
-                warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
+            self.load(path, session)
 
 
 class Param(object):
@@ -58,7 +61,7 @@ class ParamGroup(Param):
         k = self.abbrev_or_name()
         v = '_'.join(str(param) for param in
                      sorted(self.value, key=lambda p: p.abbrev_or_name()))
-        return k+"={"+str(v)+"}"
+        return k + "={" + str(v) + "}"
 
     def __init__(self, name, params, abbrev=None):
         Param.__init__(self, name, params, abbrev)
@@ -123,6 +126,9 @@ class Logger(object):
 
     def log(self, summary, group=None):
         self._summaries[group].append(summary)
+
+    def remove_log_group(self, group=None):
+        self._summaries.pop(group)
 
     def log_scalar(self, name, tensor, group=None):
         self.log(tf.summary.scalar(name, tensor), group)
