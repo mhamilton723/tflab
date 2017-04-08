@@ -7,6 +7,7 @@ import tensorflow as tf
 from .utils import get_or_create_path
 from tensorflow.core.framework import summary_pb2
 from collections import defaultdict
+import shutil
 
 
 class Serializable(object):
@@ -26,8 +27,10 @@ class Serializable(object):
         if os.path.exists(path + ".index"):
             print("Checkpoint Found: loading model from {}".format(path))
             self.saver.restore(session, path)
+            return True
         else:
             warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
+            return False
 
     def load_or_initialize(self, save_path, name, session, try_load=True):
         self._create_saver()
@@ -141,6 +144,15 @@ class Logger(object):
     def log_histogram(self, name, tensor, group=None):
         self.log(tf.summary.histogram(name, tensor), group)
 
+    def log_image(self, name, tensor, group=None, no_minibatch=False, no_channels=False):
+
+        if no_minibatch:
+            tensor = tf.expand_dims(tensor, 0)
+        if no_channels:
+            tensor = tf.expand_dims(tensor, -1)
+
+        self.log(tf.summary.image(name, tensor), group)
+
     def log_emitter(self, session, step, interval=1000, group=None, additional=None, precision=4):
         if step % interval == 0:
             if additional is not None:
@@ -182,5 +194,17 @@ class Model(Serializable, Parametrizable, Logger):
     def save(self, session):
         Serializable.save(self, self.save_path, str(self), session)
 
-    def load_or_initialize(self, session, try_load=True):
-        Serializable.load_or_initialize(self, self.save_path, str(self), session, try_load)
+    def load_or_initialize(self, session, try_load=True, remove_old_logs=True):
+        self._create_saver()
+        tf.global_variables_initializer().run()
+        if try_load:
+            path = os.path.join(self.save_path, "checkpoints", str(self))
+            wipe_logs = not self.load(path, session)
+        else:
+            wipe_logs = True
+
+        if wipe_logs and remove_old_logs:
+            old_logs = os.path.join(self.summary_path(), str(self))
+            if os.path.isdir(old_logs):
+                print("removing old logs at {}".format(old_logs))
+                shutil.rmtree(old_logs)
