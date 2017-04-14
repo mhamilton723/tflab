@@ -8,6 +8,7 @@ from .utils import get_or_create_path
 from tensorflow.core.framework import summary_pb2
 from collections import defaultdict
 import shutil
+import pickle
 
 
 class Serializable(object):
@@ -193,6 +194,31 @@ class Model(Serializable, Parametrizable, Logger):
 
     def save(self, session):
         Serializable.save(self, self.save_path, str(self), session)
+
+    def save_nontf(self, name, obj):
+        path = get_or_create_path(self.save_path, "nontf", name, str(self))
+        with open(path, "w+") as f:
+            pickle.dump(obj, f)
+
+    def load_nontf(self, name):
+        path = os.path.join(self.save_path, "nontf", name, str(self))
+        with open(path, 'r') as f:
+            return pickle.load(f)
+
+    def try_load_nontf(self, name, on_failure=None, try_load=True):
+        path = os.path.join(self.save_path, "nontf", name, str(self))
+        if os.path.exists(path) and try_load:
+            print("Loading {} from file".format(name))
+            return self.load_nontf(name)
+        else:
+            print("File {} does not exist".format(path))
+            if on_failure is not None:
+                print("Recomputing {}".format(name))
+                return on_failure()
+
+    def can_load(self):
+        path = os.path.join(self.save_path, "checkpoints", str(self))
+        return os.path.exists(path + ".index")
 
     def load_or_initialize(self, session, try_load=True, remove_old_logs=True):
         self._create_saver()
