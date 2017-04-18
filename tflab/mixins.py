@@ -197,12 +197,12 @@ class Model(Serializable, Parametrizable, Logger):
 
     def save_nontf(self, name, obj):
         path = get_or_create_path(self.save_path, "nontf", name, str(self))
-        with open(path, "w+") as f:
+        with open(path, "wb+") as f:
             pickle.dump(obj, f)
 
     def load_nontf(self, name):
         path = os.path.join(self.save_path, "nontf", name, str(self))
-        with open(path, 'r') as f:
+        with open(path, 'rb') as f:
             return pickle.load(f)
 
     def try_load_nontf(self, name, on_failure=None, try_load=True):
@@ -211,7 +211,8 @@ class Model(Serializable, Parametrizable, Logger):
             print("Loading {} from file".format(name))
             return self.load_nontf(name)
         else:
-            print("File {} does not exist".format(path))
+            if not os.path.exists(path):
+                print("File {} does not exist".format(path))
             if on_failure is not None:
                 print("Recomputing {}".format(name))
                 return on_failure()
