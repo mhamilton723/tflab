@@ -1,14 +1,16 @@
+import tensorflow as tf
+from tensorflow.core.framework import summary_pb2
+
 import os
 import warnings
-from abc import ABCMeta, abstractmethod
-
-import tensorflow as tf
-
-from .utils import get_or_create_path
-from tensorflow.core.framework import summary_pb2
 from collections import defaultdict
 import shutil
 import pickle
+import numpy as np
+import h5py
+
+from scipy.sparse import dok_matrix
+from .utils import get_or_create_path
 
 
 class Serializable(object):
@@ -79,13 +81,13 @@ class Parametrizable(object):
 
     def add_params(self, params):
         if isinstance(params, dict):
-            params = [Param(name, value) for name, value in params.iteritems()]
+            params = [Param(name, value) for name, value in params.items()]
         for p in params:
             self._param_map[p.name] = p
 
     def add_param_group(self, name, params, abbrev=None):
         if isinstance(params, dict):
-            params = [Param(k, v) for k, v in params.iteritems()]
+            params = [Param(k, v) for k, v in params.items()]
         self._param_map[name] = ParamGroup(name, params, abbrev)
 
     def get_param(self, name):
@@ -157,7 +159,7 @@ class Logger(object):
     def log_emitter(self, session, step, interval=1000, group=None, additional=None, precision=4):
         if step % interval == 0:
             if additional is not None:
-                additional_ops = {k: v for (k, v) in additional.iteritems() if isinstance(v, tf.Tensor)}
+                additional_ops = {k: v for (k, v) in additional.items() if isinstance(v, tf.Tensor)}
             else:
                 additional_ops = {}
 
@@ -170,7 +172,7 @@ class Logger(object):
                 output_dict[key] = output
 
             terms = []
-            for (k, v) in sorted(output_dict.iteritems()):
+            for (k, v) in sorted(output_dict.items()):
                 if isinstance(v, float):
                     formatted = "%0.*e" % (precision, v)
                 else:
@@ -195,15 +197,69 @@ class Model(Serializable, Parametrizable, Logger):
     def save(self, session):
         Serializable.save(self, self.save_path, str(self), session)
 
-    def save_nontf(self, name, obj):
-        path = get_or_create_path(self.save_path, "nontf", name, str(self))
-        with open(path, "wb+") as f:
-            pickle.dump(obj, f)
+    def save_nontf(self, name, *objs):
+        path = get_or_create_path(self.save_path, "nontf", name, str(self), exclude_last=False)
+        for dir in os.listdir(path):
+            f = os.path.join(path, dir)
+            try:
+                shutil.rmtree(f)
+            except NotADirectoryError:
+                os.remove(f)
+        print("Saving to {}".format(path))
+        for i, obj in enumerate(objs):
+            if isinstance(obj, (np.ndarray, np.generic)):
+                print("saving obj {} as numpy".format(i))
+                key = "numpy"
+                sub_filename = os.path.join(path, "{}_{}_{}".format(i, key, ".hdf5"))
+                with h5py.File(sub_filename, 'w') as hf:
+                    hf.create_dataset('data', data=obj)
+
+            elif isinstance(obj, dok_matrix):
+                print("saving obj {} as dok".format(i))
+                key = "dok"
+                sub_filename = os.path.join(path, "{}_{}_{}".format(i, key, ".hdf5"))
+                keys, values = zip(*obj.items())
+                with h5py.File(sub_filename, 'w') as hf:
+                    hf.create_dataset('keys', data=np.array(keys))
+                    hf.create_dataset('values', data=np.array(values), dtype=obj.dtype)
+                    hf.create_dataset('shape', data=np.array(obj.shape))
+
+            else:
+                print("saving obj {} as pkl".format(i))
+                key = "pkl"
+                sub_filename = os.path.join(path, "{}_{}_{}".format(i, key, ".pkl"))
+                with open(sub_filename, "wb+") as f:
+                    pickle.dump(obj, f)
 
     def load_nontf(self, name):
         path = os.path.join(self.save_path, "nontf", name, str(self))
-        with open(path, 'rb') as f:
-            return pickle.load(f)
+        sub_filenames = [os.path.join(path, fn) for fn in os.listdir(path)]
+        data_dict = {}
+        print("Loading from {}".format(path))
+
+        for sub_filename in sub_filenames:
+            number, key, extension = os.path.basename(sub_filename).split("_")
+            if key == "numpy":
+                with h5py.File(sub_filename, 'r') as hf:
+                    data_dict[number] = np.array(hf.get('data'))
+            elif key == "dok":
+                with h5py.File(sub_filename, 'r') as hf:
+                    keys = hf.get('keys')
+                    values = hf.get('values')
+                    shape = np.array(hf.get('shape'))
+                    dok = dok_matrix(tuple(shape), dtype=values.dtype)
+                    print("creating dok")
+                    for k, v in zip(keys, values):
+                        dok[k] = v
+                    print("done creating dok")
+                    del keys
+                    del values
+                    data_dict[number] = dok
+            elif key == "pkl":
+                with open(sub_filename, 'rb') as f:
+                    data_dict[number] = pickle.load(f)
+        objs = [p[1] for p in sorted(data_dict.items())]
+        return objs
 
     def try_load_nontf(self, name, on_failure=None, try_load=True):
         path = os.path.join(self.save_path, "nontf", name, str(self))

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import collections
 import inspect
 import os
@@ -7,7 +8,7 @@ import h5py
 import numpy as np
 import tensorflow as tf
 
-import optimizers
+import tflab.tflab.optimizers
 
 
 def dot(x, y):
@@ -35,13 +36,13 @@ def distance_to_line(a, n, p):
 
 
 def get_or_create_path(*paths, **kwargs):
-    if "exclude_last" not in kwargs or not kwargs["exclude_last"]:
+    if "exclude_last" not in kwargs or kwargs["exclude_last"]:
         dir_paths = [path for path in paths][:-1]
     else:
         dir_paths = [path for path in paths]
 
     if not os.path.exists(os.path.join(*dir_paths)):
-        print "making dir {}".format(os.path.join(*dir_paths))
+        print("making dir {}".format(os.path.join(*dir_paths)))
         os.makedirs(os.path.join(*dir_paths))
     return os.path.join(*paths)
 
@@ -151,9 +152,6 @@ def instantiate_with_flags(clazz, FLAGS, **kwargs):
         if arg not in params.keys():
             raise UserWarning("argument: {} is not handled by flags, beware of errors".format(arg))
     return clazz(**params)
-
-
-
 
 
 def optimize_(loss_, name, starting_lr, decay, global_step_, var_list=None):
