@@ -110,9 +110,10 @@ class Logger(object):
         raise NotImplementedError
 
     def emit_non_tensor(self, tag, value, step):
-        val = summary_pb2.Summary.Value(tag=tag, simple_value=value)
-        summary = summary_pb2.Summary(value=[val])
+        summary = tf.Summary()
+        summary.value.add(tag=tag, simple_value=value)
         self.summary_writer().add_summary(summary, step)
+        self.summary_writer().flush()
         print("Step: {} {}: {}".format(step, tag, value))
 
     def _summarize_moments(self, name, variable):
@@ -190,9 +191,16 @@ class Model(Serializable, Parametrizable, Logger):
     def summary_path(self):
         return os.path.join(self.save_path, "summaries")
 
+    _summary_writer  =None
+    _summary_path = None
+
     def summary_writer(self):
-        return tf.summary.FileWriter(
-            get_or_create_path(self.summary_path(), str(self), exclude_last=False))
+        if self._summary_writer is None or self._summary_path != self.summary_path():
+            self._summary_writer = tf.summary.FileWriter(
+                get_or_create_path(self.summary_path(), str(self), exclude_last=False))
+            self._summary_path = os.path.join(self.summary_path(), str(self))
+
+        return self._summary_writer
 
     def save(self, session):
         Serializable.save(self, self.save_path, str(self), session)
@@ -291,3 +299,5 @@ class Model(Serializable, Parametrizable, Logger):
             if os.path.isdir(old_logs):
                 print("removing old logs at {}".format(old_logs))
                 shutil.rmtree(old_logs)
+            else:
+                print("{} is not a directory".format(old_logs))
