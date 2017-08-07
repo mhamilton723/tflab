@@ -14,29 +14,39 @@ from .utils import get_or_create_path
 
 
 class Serializable(object):
-    saver = None
 
-    def _create_saver(self):
-        if self.saver is None:
-            self.saver = tf.train.Saver()
+    def __init__(self):
+        self._vars = set()
+        self._saver = None
+
+    def _update_vars(self):
+        self._vars = set(tf.get_collection(tf.GraphKeys.VARIABLES))
+
+    def saver(self):
+        old_vars = self._vars
+        self._update_vars()
+
+        if len(self._vars)==0 and self._saver is None:
+            raise ValueError("Need to have variables to save before calling the saver")
+
+        if old_vars != self._vars:
+            self._saver = tf.train.Saver()
 
     def save(self, save_path, name, session):
-        self._create_saver()
         path = get_or_create_path(save_path, "checkpoints", name)
-        self.saver.save(session, path)
+        self.saver().save(session, path)
         print("Saved to {}".format(path))
 
     def load(self, path, session):
         if os.path.exists(path + ".index"):
             print("Checkpoint Found: loading model from {}".format(path))
-            self.saver.restore(session, path)
+            self.saver().restore(session, path)
             return True
         else:
             warnings.warn("No Checkpoint found, starting from scratch", UserWarning)
             return False
 
     def load_or_initialize(self, save_path, name, session, try_load=True):
-        self._create_saver()
         tf.global_variables_initializer().run()
         if try_load:
             path = os.path.join(save_path, "checkpoints", name)
@@ -67,14 +77,15 @@ class ParamGroup(Param):
         k = self.abbrev_or_name()
         v = '_'.join(str(param) for param in
                      sorted(self.value, key=lambda p: p.abbrev_or_name()))
-        return k + "={" + str(v) + "}"
+        return k + "={" + v + "}"
 
     def __init__(self, name, params, abbrev=None):
         Param.__init__(self, name, params, abbrev)
 
 
 class Parametrizable(object):
-    _param_map = {}
+    def __init__(self):
+        self._param_map = {}
 
     def add_param(self, name, value, abbrev=None):
         self._param_map[name] = Param(name, value, abbrev)
@@ -86,6 +97,8 @@ class Parametrizable(object):
             self._param_map[p.name] = p
 
     def add_param_group(self, name, params, abbrev=None):
+        if name in self._param_map:
+            raise ValueError("The param map already contains a parameter with name " + name)
         if isinstance(params, dict):
             params = [Param(k, v) for k, v in params.items()]
         self._param_map[name] = ParamGroup(name, params, abbrev)
@@ -94,17 +107,19 @@ class Parametrizable(object):
         return self._param_map[name]
 
     def get_params(self):
-        return self._param_map.values()
+        return list(self._param_map.values())
 
     def del_param(self, name):
         self._param_map.pop(name)
 
     def __str__(self):
-        return "_".join(str(p) for p in sorted(self._param_map.values(), key=lambda p: p.abbrev_or_name()))
+        return "_".join(str(p) for p in sorted(list(self._param_map.values()), key=lambda p: p.abbrev_or_name()))
 
 
 class Logger(object):
-    _summaries = defaultdict(list)
+
+    def __init__(self):
+        self._summaries = defaultdict(list)
 
     def summary_writer(self):
         raise NotImplementedError
@@ -186,13 +201,23 @@ class Logger(object):
 
 
 class Model(Serializable, Parametrizable, Logger):
-    save_path = None
+
+    def __init__(self, save_path=None):
+        self.save_path = save_path
+        self._summary_writer = None
+        self._summary_path = None
+        Parametrizable.__init__(self)
+        Logger.__init__(self)
+        Serializable.__init__(self)
+
+    def get_save_path(self):
+        if self.save_path is None:
+            raise AttributeError("need to define a save path before using the save path")
+        else:
+            return self.save_path
 
     def summary_path(self):
-        return os.path.join(self.save_path, "summaries")
-
-    _summary_writer  =None
-    _summary_path = None
+        return os.path.join(self.get_save_path(), "summaries")
 
     def summary_writer(self):
         if self._summary_writer is None or self._summary_path != self.summary_path():
@@ -203,10 +228,10 @@ class Model(Serializable, Parametrizable, Logger):
         return self._summary_writer
 
     def save(self, session):
-        Serializable.save(self, self.save_path, str(self), session)
+        Serializable.save(self, self.get_save_path(), str(self), session)
 
     def save_nontf(self, name, *objs):
-        path = get_or_create_path(self.save_path, "nontf", name, str(self), exclude_last=False)
+        path = get_or_create_path(self.get_save_path(), "nontf", name, str(self), exclude_last=False)
         for dir in os.listdir(path):
             f = os.path.join(path, dir)
             try:
@@ -240,7 +265,7 @@ class Model(Serializable, Parametrizable, Logger):
                     pickle.dump(obj, f)
 
     def load_nontf(self, name):
-        path = os.path.join(self.save_path, "nontf", name, str(self))
+        path = os.path.join(self.get_save_path(), "nontf", name, str(self))
         sub_filenames = [os.path.join(path, fn) for fn in os.listdir(path)]
         data_dict = {}
         print("Loading from {}".format(path))
@@ -270,7 +295,7 @@ class Model(Serializable, Parametrizable, Logger):
         return objs
 
     def try_load_nontf(self, name, on_failure=None, try_load=True):
-        path = os.path.join(self.save_path, "nontf", name, str(self))
+        path = os.path.join(self.get_save_path(), "nontf", name, str(self))
         if os.path.exists(path) and try_load:
             print("Loading {} from file".format(name))
             return self.load_nontf(name)
@@ -282,14 +307,13 @@ class Model(Serializable, Parametrizable, Logger):
                 return on_failure()
 
     def can_load(self):
-        path = os.path.join(self.save_path, "checkpoints", str(self))
+        path = os.path.join(self.get_save_path(), "checkpoints", str(self))
         return os.path.exists(path + ".index")
 
     def load_or_initialize(self, session, try_load=True, remove_old_logs=True):
-        self._create_saver()
         tf.global_variables_initializer().run()
         if try_load:
-            path = os.path.join(self.save_path, "checkpoints", str(self))
+            path = os.path.join(self.get_save_path(), "checkpoints", str(self))
             wipe_logs = not self.load(path, session)
         else:
             wipe_logs = True

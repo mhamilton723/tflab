@@ -54,6 +54,7 @@ class Word2Vec(Model):
                  min_count=7,
 
                  name="word2vec"):
+        Model.__init__(self)
 
         self.embedding_size = embedding_size
         self.train_data = train_data
