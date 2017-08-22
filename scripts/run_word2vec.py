@@ -1,4 +1,5 @@
 import tensorflow as tf
+import sys
 
 try:
     from tflab.utils import call_with_flags, instantiate_with_flags
@@ -56,10 +57,8 @@ def main(_):
     with tf.Graph().as_default(), tf.Session() as session:
         with tf.device("/cpu:0"):
             model = instantiate_with_flags(Word2Vec, FLAGS, session=session)  # type: Word2Vec
-            analogies = model.read_analogies(FLAGS.eval_data)
-            model.analogy_accuracy(session, analogies)
-            call_with_flags(model.train, FLAGS, session=session)  # Process one epoch
-            model.analogy_accuracy(session, analogies)  # Eval analogies.
+            call_with_flags(model.train, FLAGS, session=session)
+            print(model.evaluator.analogy_accuracy(session))
 
 
 if __name__ == "__main__":

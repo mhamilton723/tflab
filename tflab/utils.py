@@ -7,6 +7,7 @@ import zipfile
 import h5py
 import numpy as np
 import tensorflow as tf
+from six import iteritems
 
 import tflab.tflab.optimizers
 
@@ -69,7 +70,7 @@ def load_embs(filename, top_n=None):
         nce_biases = np.array(hf.get('nce_biases'))
         reverse_dictionary = {i: w for (i, w) in enumerate(words)}
     if top_n is not None:
-        reverse_dictionary = {i: w for (i, w) in reverse_dictionary.iteritems() if i < top_n}
+        reverse_dictionary = {i: w for (i, w) in iteritems(reverse_dictionary) if i < top_n}
         embeddings = embeddings[:top_n]
         nce_weights = nce_weights[:top_n]
         nce_biases = nce_biases[:top_n]
@@ -98,7 +99,7 @@ def build_dataset(words, vocabulary_size):
 
 def cross_reference(dictionary_target, dictionary_source):
     cross_ref = {}
-    for (kt, vt) in dictionary_target.iteritems():
+    for (kt, vt) in iteritems(dictionary_target):
         if kt in dictionary_source:
             cross_ref[dictionary_source[kt]] = vt
     return cross_ref
@@ -115,7 +116,7 @@ def save_embs(name, reverse_dictionary, embs, nce_weights, nce_biases):
 
 def create_true_pairing(cross_ref, nrs):
     p = np.zeros((nrs.vocabulary_size_source, nrs.vocabulary_size_target))
-    for (vs, vt) in cross_ref.iteritems():
+    for (vs, vt) in iteritems(cross_ref):
         p[vs, vt] = 1.0
     return p
 
@@ -123,20 +124,20 @@ def create_true_pairing(cross_ref, nrs):
 def create_sparse_initialization(cross_ref, nrs):
     indicies = []
     values = []
-    for (vs, vt) in cross_ref.iteritems():
+    for (vs, vt) in iteritems(cross_ref):
         indicies.append([vs, vt])
         values.append(1.0)
     return indicies, values, [nrs.vocabulary_size_source, nrs.vocabulary_size_target]
 
 
 def avg_correct_probability_mass(p_hat, cross_ref):
-    probs = np.array([p_hat[vs, vt] for (vs, vt) in cross_ref.iteritems()])
+    probs = np.array([p_hat[vs, vt] for (vs, vt) in iteritems(cross_ref)])
     return probs.mean()
 
 
 def call_with_flags(function, FLAGS, **kwargs):
     argnames = {arg for arg in inspect.getargspec(function)[0] if arg not in {"self"}}
-    params = {k: v for (k, v) in FLAGS.__dict__['__flags'].iteritems() if k in argnames}
+    params = {k: v for (k, v) in iteritems(FLAGS.__dict__['__flags']) if k in argnames}
     params.update(kwargs)
     for arg in argnames:
         if arg not in params.keys():
@@ -146,7 +147,7 @@ def call_with_flags(function, FLAGS, **kwargs):
 
 def instantiate_with_flags(clazz, FLAGS, **kwargs):
     argnames = {arg for arg in inspect.getargspec(clazz.__init__)[0] if arg not in {"self"}}
-    params = {k: v for (k, v) in FLAGS.__dict__['__flags'].iteritems() if k in argnames}
+    params = {k: v for (k, v) in iteritems(FLAGS.__dict__['__flags']) if k in argnames}
     params.update(kwargs)
     for arg in argnames:
         if arg not in params.keys():
