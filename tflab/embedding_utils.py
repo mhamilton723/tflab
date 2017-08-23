@@ -12,7 +12,7 @@ class AnalogyEvaluator(object):
             self.word2id[w] = i
         self.analogy_questions = self.read_analogies(analogy_path)
 
-    def read_analogies(self, eval_data):
+    def read_analogies(self, analogy_path):
         """
         Reads through the analogy question file.
 
