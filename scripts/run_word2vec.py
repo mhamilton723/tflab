@@ -1,5 +1,4 @@
 import tensorflow as tf
-import sys
 
 try:
     from tflab.utils import call_with_flags, instantiate_with_flags
