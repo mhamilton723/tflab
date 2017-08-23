@@ -11,6 +11,7 @@ import h5py
 
 from scipy.sparse import dok_matrix
 from .utils import get_or_create_path
+from six.moves import xrange
 
 
 class Serializable(object):
@@ -240,7 +241,7 @@ class Model(Serializable, Parametrizable, Logger):
                 os.remove(f)
         print("Saving to {}".format(path))
         for i, obj in enumerate(objs):
-            if isinstance(obj, (np.ndarray, np.generic)):
+            if isinstance(obj, (np.ndarray, np.generic)) and np.issubdtype(obj.dtype, np.number):
                 print("saving obj {} as numpy".format(i))
                 key = "numpy"
                 sub_filename = os.path.join(path, "{}_{}_{}".format(i, key, ".hdf5"))
