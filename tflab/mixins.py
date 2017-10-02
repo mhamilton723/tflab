@@ -21,7 +21,7 @@ class Serializable(object):
         self._saver = None
 
     def _update_vars(self):
-        self._vars = set(tf.get_collection(tf.GraphKeys.VARIABLES))
+        self._vars = set(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
 
     def saver(self):
         old_vars = self._vars

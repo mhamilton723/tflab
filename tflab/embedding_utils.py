@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf 
+from six.moves import xrange
 
 class AnalogyEvaluator(object):
     """Class to evaluate analogies"""
@@ -22,7 +23,7 @@ class AnalogyEvaluator(object):
         """
         questions = []
         questions_skipped = 0
-        with open(eval_data, "rb") as analogy_f:
+        with open(analogy_path, "rb") as analogy_f:
             for line in analogy_f:
                 if line.startswith(b":"):  # Skip comments.
                     continue
@@ -32,7 +33,7 @@ class AnalogyEvaluator(object):
                     questions_skipped += 1
                 else:
                     questions.append(np.array(ids))
-        print("Eval analogy file: ", eval_data)
+        print("Eval analogy file: ", analogy_path)
         print("Questions: ", len(questions))
         print("Skipped: ", questions_skipped)
         return np.array(questions, dtype=np.int32)
