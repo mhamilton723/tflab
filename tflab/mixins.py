@@ -32,6 +32,7 @@ class Serializable(object):
 
         if old_vars != self._vars:
             self._saver = tf.train.Saver()
+        return self._saver
 
     def save(self, save_path, name, session):
         path = get_or_create_path(save_path, "checkpoints", name)
