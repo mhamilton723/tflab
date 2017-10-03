@@ -222,7 +222,7 @@ class Model(Serializable, Parametrizable, Logger):
         return os.path.join(self.get_save_path(), "summaries")
 
     def summary_writer(self):
-        if self._summary_writer is None or self._summary_path != self.summary_path():
+        if self._summary_writer is None or self._summary_path != os.path.join(self.summary_path(), str(self)):
             self._summary_writer = tf.summary.FileWriter(
                 get_or_create_path(self.summary_path(), str(self), exclude_last=False))
             self._summary_path = os.path.join(self.summary_path(), str(self))
