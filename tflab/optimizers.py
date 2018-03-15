@@ -44,6 +44,7 @@ class ASGradientDescentOptimizer(optimizer.Optimizer):
         self._scale_tensor = ops.convert_to_tensor(self._scale, name="scale")
 
     def _apply_dense(self, grad, var):
+        
         previous_grad = self.get_slot(var, "previous_grad")
         lr = self.get_slot(var, "learning_rate")
         scale_factor = tf.pow(self._scale_tensor, tf.sign(grad * previous_grad))

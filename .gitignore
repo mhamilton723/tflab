@@ -6,3 +6,4 @@ plots
 build
 *.so
 *.egg-info
+bin
