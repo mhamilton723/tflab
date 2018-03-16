@@ -49,16 +49,14 @@ def PrepareData():
     n_samples = mnist.data.shape[0]
     n_features= mnist.data.shape[1]
     n_classes= len(np.unique(mnist.target))
-#    y1=train_y.view(np.int)
-#    y1[:]=train_y
-#    train_y=np.eye(n_classes)[y1]
+
     train_y=train_y.astype(np.int16)
     train_y=np.eye(n_classes)[train_y]
     return train_x,train_y,n_samples,n_features,n_classes
     
 
 # Parameters
-steps = 100
+steps = 1000
 learning_rate = 0.001
 train_x,train_y,n_samples,n_features,n_classes=PrepareData()
 
@@ -82,29 +80,29 @@ rng.seed(1234)
 # declaring model a.k.a. op
 
 
-pred = tf.nn.softmax(tf.matmul(x,W,name="matmulp")+b)
+#pred = tf.nn.softmax(tf.matmul(x,W,name="matmulp")+b)
 
 #cost = tf.reduce_mean(-tf.reduce_sum(y*tf.log(pred+1e-8),reduction_indices=1))
 
 opts = [
     tf.train.GradientDescentOptimizer(learning_rate=learning_rate),
-#    ASGradientDescentOptimizer(base_learning_rate=learning_rate,scale=1.001),
-#    tf.train.RMSPropOptimizer(learning_rate=learning_rate),
-#    ASRMSPropOptimizer(base_learning_rate=learning_rate,scale=1.001),
-#    tf.train.AdamOptimizer(learning_rate=learning_rate),
-#    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9),
-#    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9, use_nesterov=True),
-#    tf.train.AdagradOptimizer(learning_rate=learning_rate)
+    ASGradientDescentOptimizer(base_learning_rate=learning_rate,scale=1.001),
+    tf.train.RMSPropOptimizer(learning_rate=learning_rate),
+    ASRMSPropOptimizer(base_learning_rate=learning_rate,scale=1.001),
+    tf.train.AdamOptimizer(learning_rate=learning_rate),
+    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9),
+    tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=.9, use_nesterov=True),
+    tf.train.AdagradOptimizer(learning_rate=learning_rate)
 ]
 opt_names = [
         'SGD', 
-#        'SGD+AS', 
-#        'RMSProp', 
-#        'RMSProp+AS', 
-#        'ADAM', 
-#        'SGD+M', 
-#        'SGD+NM', 
-#        'Adagrad'
+        'SGD+AS', 
+        'RMSProp', 
+        'RMSProp+AS', 
+        'ADAM', 
+        'SGD+M', 
+        'SGD+NM', 
+        'Adagrad'
         ]
 
 # Launch the graph
@@ -112,7 +110,7 @@ losses = []
 with tf.Session() as sess:
     for i, opt in enumerate(opts):
         print(opt_names[i])
-        reg = FeedForwardSMRegression([784, 10], nonlinearities=lambda x: x)
+        reg = FeedForwardSMRegression([784, 10], nonlinearities=lambda x: tf.exp(x)/tf.reduce_sum(tf.exp(x)))
         loss = reg.train(sess, train_x, train_y, minibatch_size=100,
                          steps=steps, optimizer=opts[i])
         losses.append(loss)

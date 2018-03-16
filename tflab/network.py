@@ -153,58 +153,9 @@ class MMDNet(FeedForward):
         return losses
 
 
-
-class FeedForward2(object):
-    def _parse_list_arg(self, arg, size):
-        if isinstance(arg, list):
-            if len(arg) != size:
-                raise ValueError("Argument list has length {}, need {} ".format(len(arg), size))
-            return arg
-        else:
-            return [arg] * size
-
-    def __init__(self, sizes, nonlinearities=tf.nn.relu, seed=1234):
-        self.sizes = sizes
-        self._init_weights()
-        self.nonlinearities = self._parse_list_arg(nonlinearities, len(sizes) - 1)
-        self.rng = np.random
-        self.rng.seed(seed)
-
-    def _init_weights(self):
-        self.weights = []
-        for i in range(len(self.sizes) - 2):
-            self.weights.append(tf.Variable(tf.random_normal((self.sizes[i], self.sizes[i + 1])), dtype=tf.float32))
-           
-    def transform_(self, X_):
-        h = X_
-        for i, W  in enumerate(self.weights):
-            h_raw = tf.nn.softmax(tf.matmul(h, W) )
-            h = self.nonlinearities[i](h_raw)
-        return h
-
-    def transform(self, session, X):
-        X_ = tf.placeholder(tf.float32, (None, self.sizes[0]))
-        Y_hat_ = self.transform_(X_)
-        return session.run(Y_hat_, feed_dict={X_: X})
-
-    def train_(self, loss, optimizer):
-        return optimizer.minimize(loss)
-
-    def _gen_paired_minibatch(self, batch_size, i, size_limit):
-        indicies = range(i * batch_size, (i + 1) * batch_size)
-        indicies = [i % size_limit for i in indicies]
-        return indicies
-
-    def _gen_unpaired_minibatch(self, batch_size, size_limit):
-        indicies = np.random.choice(range(size_limit), [batch_size])
-        return indicies
-
-
-
-
-class FeedForwardSMRegression(FeedForward2):
+class FeedForwardSMRegression(FeedForward):
     def loss_(self, X_, Y_):
-        Y_hat_ = self.transform_(Y_)
+        Y_hat_ = self.transform_(X_)
         return crossentropy( Y_,Y_hat_)
 
     def train(self, sess, X, Y,
