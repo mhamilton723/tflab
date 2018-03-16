@@ -7,7 +7,7 @@ def mse(X, Y):
     return tf.reduce_mean(tf.squared_difference(X, Y))
 
 def crossentropy(Y,Yhat):
-    return tf.reduce_mean(-tf.reduce_sum(Y*tf.log(Yhat+1e-8)))
+    return tf.reduce_mean(-tf.reduce_sum(tf.multiply(Y,tf.log(Yhat+1e-8),name="elemwise")),name="CrossEntropy")
 # calculate the squared distance between x and y
 def squared_cdistance(X_, Y_):
     r_ = tf.expand_dims(X_, 1, "r_1")

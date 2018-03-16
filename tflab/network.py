@@ -154,16 +154,65 @@ class MMDNet(FeedForward):
 
 
 
-class FeedForwardSMRegression(FeedForward):
-    def loss_(self, X_, Y_):
+class FeedForward2(object):
+    def _parse_list_arg(self, arg, size):
+        if isinstance(arg, list):
+            if len(arg) != size:
+                raise ValueError("Argument list has length {}, need {} ".format(len(arg), size))
+            return arg
+        else:
+            return [arg] * size
+
+    def __init__(self, sizes, nonlinearities=tf.nn.relu, seed=1234):
+        self.sizes = sizes
+        self._init_weights()
+        self.nonlinearities = self._parse_list_arg(nonlinearities, len(sizes) - 1)
+        self.rng = np.random
+        self.rng.seed(seed)
+
+    def _init_weights(self):
+        self.weights = []
+        for i in range(len(self.sizes) - 2):
+            self.weights.append(tf.Variable(tf.random_normal((self.sizes[i], self.sizes[i + 1])), dtype=tf.float32))
+           
+    def transform_(self, X_):
+        h = X_
+        for i, W  in enumerate(self.weights):
+            h_raw = tf.nn.softmax(tf.matmul(h, W) )
+            h = self.nonlinearities[i](h_raw)
+        return h
+
+    def transform(self, session, X):
+        X_ = tf.placeholder(tf.float32, (None, self.sizes[0]))
         Y_hat_ = self.transform_(X_)
+        return session.run(Y_hat_, feed_dict={X_: X})
+
+    def train_(self, loss, optimizer):
+        return optimizer.minimize(loss)
+
+    def _gen_paired_minibatch(self, batch_size, i, size_limit):
+        indicies = range(i * batch_size, (i + 1) * batch_size)
+        indicies = [i % size_limit for i in indicies]
+        return indicies
+
+    def _gen_unpaired_minibatch(self, batch_size, size_limit):
+        indicies = np.random.choice(range(size_limit), [batch_size])
+        return indicies
+
+
+
+
+class FeedForwardSMRegression(FeedForward2):
+    def loss_(self, X_, Y_):
+        Y_hat_ = self.transform_(Y_)
         return crossentropy( Y_,Y_hat_)
 
     def train(self, sess, X, Y,
               steps=10000, minibatch_size=200,
               optimizer=tf.train.RMSPropOptimizer(learning_rate=.001)):
-        X_ = tf.placeholder(tf.float32, (None, self.sizes[0]))
-        Y_ = tf.placeholder(tf.float32, (None, self.sizes[-1]))
+        X_ = tf.placeholder(tf.float32, (None, self.sizes[0]),"FeedForwdRegression_X")
+        Y_ = tf.placeholder(tf.float32, (None, self.sizes[-1]),"FeedForwdRegression_Y")
+        
         loss_ = self.loss_(X_, Y_)
         train_ = self.train_(loss_, optimizer)
 
@@ -178,7 +227,7 @@ class FeedForwardSMRegression(FeedForward):
             train_val, loss_val = sess.run([train_, loss_], feed_dict={X_: batch_X, Y_: batch_Y})
             losses.append(loss_val)
             if step % 500 == 0:
-                print("Step {} of {}, mse {}".format(step, steps, loss_val))
+                print("Step {} of {}, logloss {}".format(step, steps, loss_val))
         return losses
 
     

@@ -41,7 +41,7 @@ rng.seed(1234)
 # Training Data
 train_X = rng.randn(n_samples, X_dim)
 M = rng.randn(X_dim, Y_dim)
-b= rng.randn(2,1)
+
 train_Y = np.dot(train_X, M)
 
 opts = [

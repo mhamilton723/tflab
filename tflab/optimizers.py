@@ -16,7 +16,7 @@ class ASGradientDescentOptimizer(optimizer.Optimizer):
     @@__init__
     """
 
-    def __init__(self, base_learning_rate, scale=1.01, use_locking=False, name="GradientDescent"):
+    def __init__(self, base_learning_rate=0.001, scale=1.01, use_locking=False, name="GradientDescent_AS"):
         """Construct a new gradient descent optimizer.
 
         Args:

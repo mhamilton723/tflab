@@ -27,7 +27,7 @@ from  optimizers import ASGradientDescentOptimizer, ASRMSPropOptimizer
 
 #Setting parameters
 learning_late= 0.001
-num_of_epochs =100
+num_of_epochs =50
 batch_size=100
 display_step=1
 
@@ -130,7 +130,8 @@ for loss, opt_name in zip(losses, ['ASGD','SGD']):
 plt.legend()
 #plt.savefig("../../tflab/plots/logreg_comparison1.png")
 
-plt.savefig("D:/BecomingADS/tflab/plots/logreg_comparison1.png")
+plt.savefig("D:/BecomingADS/tflab/plots/logreg_comparisonzz.png")
 
 
-print(losses[1])
+
+
