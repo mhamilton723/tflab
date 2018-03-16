@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
-from cost_functions import mse, mmd_squared, gaussian, multiscale_gaussian
+from cost_functions import mse, mmd_squared, gaussian, multiscale_gaussian,crossentropy
 
 
 class FeedForward(object):
@@ -151,3 +151,34 @@ class MMDNet(FeedForward):
                                             feed_dict={X_: batch_X, Y_: batch_Y, R_: batch_R, S_: batch_S})
                 print("Training Step {} of {}, loss {}, mmd {}, mse {}".format(step, steps, loss_val, mmd_val, mse_val))
         return losses
+
+
+
+class FeedForwardSMRegression(FeedForward):
+    def loss_(self, X_, Y_):
+        Y_hat_ = self.transform_(X_)
+        return crossentropy( Y_,Y_hat_)
+
+    def train(self, sess, X, Y,
+              steps=10000, minibatch_size=200,
+              optimizer=tf.train.RMSPropOptimizer(learning_rate=.001)):
+        X_ = tf.placeholder(tf.float32, (None, self.sizes[0]))
+        Y_ = tf.placeholder(tf.float32, (None, self.sizes[-1]))
+        loss_ = self.loss_(X_, Y_)
+        train_ = self.train_(loss_, optimizer)
+
+        sess.run(tf.global_variables_initializer())
+        # Fit all training data
+        losses = []
+        for step in range(steps):
+            n_batch = X.shape[0] // minibatch_size + (X.shape[0] % minibatch_size != 0)
+            i_batch = (step % n_batch) * minibatch_size
+            batch_X = X[i_batch:i_batch + minibatch_size]
+            batch_Y = Y[i_batch:i_batch + minibatch_size]
+            train_val, loss_val = sess.run([train_, loss_], feed_dict={X_: batch_X, Y_: batch_Y})
+            losses.append(loss_val)
+            if step % 500 == 0:
+                print("Step {} of {}, mse {}".format(step, steps, loss_val))
+        return losses
+
+    

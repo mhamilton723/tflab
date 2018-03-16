@@ -36,7 +36,6 @@ display_step=1
 mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 
 
-
 y = tf.placeholder(tf.float32,shape=[None,10])
 x = tf.placeholder(tf.float32,shape=[None,784])
 
@@ -51,7 +50,7 @@ pred = tf.nn.softmax(tf.matmul(x,W)+b)
 
 cost = tf.reduce_mean(-tf.reduce_sum(y*tf.log(pred+1e-8),reduction_indices=1))
 #optimizer = tf.train.GradientDescentOptimizer(learning_late).minimize(cost)
-optimizer = ASGradientDescentOptimizer(learning_late).minimize(cost)
+optimizer = ASGradientDescentOptimizer(learning_late,scale=1.0001).minimize(cost)
 #optimizer = ASRMSPropOptimizer(learning_late).minimize(cost)
 # declaring initializing variables op
 
@@ -129,4 +128,9 @@ plt.clf()
 for loss, opt_name in zip(losses, ['ASGD','SGD']):
     plt.plot(loss[::5], '+-', alpha=.5, label=opt_name)
 plt.legend()
-plt.savefig("../../tflab/plots/logreg_comparison1.png")
+#plt.savefig("../../tflab/plots/logreg_comparison1.png")
+
+plt.savefig("D:/BecomingADS/tflab/plots/logreg_comparison1.png")
+
+
+print(losses[1])
